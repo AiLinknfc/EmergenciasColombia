@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Emergencias Duitama - Directorio Inteligente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<style>
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface2: #f1f5f9;
+  --surface3: #e8edf5;
+  --border: #e2e8f0;
+  --border2: #cbd5e1;
+  --border3: #94a3b8;
+  --text: #0f172a;
+  --text2: #475569;
+  --text3: #94a3b8;
+  --green: #16a34a;
+  --red-soft: rgba(220,38,38,0.08);
+  --red-border: rgba(220,38,38,0.18);
+  --red-text: #dc2626;
+  --r: 12px;
+  --font: 'Bricolage Grotesque', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;font-feature-settings:"cv01","cv03","cv04"}
+
+/* ── Role Overlay ── */
+.role-overlay{position:fixed;inset:0;background:var(--bg);z-index:1000;display:flex;align-items:center;justify-content:center;
+  background-image:linear-gradient(rgba(203,213,225,0.35) 1px,transparent 1px),linear-gradient(90deg,rgba(203,213,225,0.35) 1px,transparent 1px);
+  background-size:40px 40px}
+.role-overlay.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.role-container{text-align:center;max-width:720px;width:90%}
+.role-logo{margin-bottom:48px}
+.role-logo-icon{width:80px;height:80px;background:linear-gradient(135deg,#B14FFF,#542AAD);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;
+  box-shadow:0 0 0 8px rgba(177,79,255,0.08),0 0 0 16px rgba(177,79,255,0.04)}
+.role-logo-icon svg{width:40px;height:40px;fill:#fff}
+.role-logo h2{font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--text2)}
+.role-title{font-size:clamp(28px,4.5vw,44px);font-weight:800;line-height:1.1;letter-spacing:-.04em;color:var(--text);margin-bottom:10px}
+.role-subtitle{font-size:15px;color:var(--text2);margin-bottom:42px;line-height:1.5}
+.role-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+.role-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:34px 22px;cursor:pointer;text-align:left;
+  box-shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.04);transition:box-shadow .2s,border-color .2s}
+.role-card:hover{border-color:rgba(177,79,255,0.25);box-shadow:0 4px 24px rgba(177,79,255,0.12),0 0 0 1px rgba(177,79,255,0.15)}
+.role-card-icon{width:54px;height:54px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;background:#f5f3ff}
+.role-card-icon svg{width:26px;height:26px;stroke:#B14FFF;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.role-card h3{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.role-card p{font-size:13px;color:var(--text2);line-height:1.45}
+
+/* ── Header ── */
+.header{max-width:940px;margin:0 auto;padding:46px 36px 32px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;background:rgba(248,250,252,0.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;gap:8px;background:var(--red-soft);border:1px solid var(--red-border);color:var(--red-text);font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;padding:5px 12px;border-radius:999px;margin-bottom:18px}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:#ef4444;display:block;flex-shrink:0}
+h1{font-size:clamp(34px,5vw,52px);font-weight:800;line-height:1.0;letter-spacing:-.04em;color:var(--text)}
+h1 em{font-style:normal;font-weight:800;background:linear-gradient(135deg,#B14FFF,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header-sub{margin-top:10px;font-size:13px;color:var(--text2);letter-spacing:.01em;line-height:1.6;max-width:460px}
+.header-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#B14FFF,#7c3aed);color:#fff;border:none;border-radius:8px;padding:11px 20px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  box-shadow:0 1px 3px rgba(177,79,255,0.3),inset 0 1px 0 rgba(255,255,255,0.1);transition:box-shadow .15s,opacity .15s}
+.btn-primary:hover{box-shadow:0 4px 16px rgba(177,79,255,0.4),inset 0 1px 0 rgba(255,255,255,0.1)}
+.btn-primary svg{width:14px;height:14px;stroke:#fff;stroke-width:2.5;fill:none;stroke-linecap:round}
+.btn-mode{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border2);border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,0.04);transition:border-color .15s}
+.btn-mode:hover{border-color:var(--border3)}
+.btn-mode svg{width:13px;height:13px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round}
+.admin-info{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px}
+.admin-info strong{color:var(--text);font-weight:600}
+.btn-logout{background:none;border:none;font-size:11px;color:#dc2626;cursor:pointer;font-family:var(--font);font-weight:600;padding:0 0 0 8px;border-left:1px solid var(--border2)}
+
+/* ── Main layout ── */
+.main{max-width:940px;margin:0 auto;padding:28px 36px 56px;
+  background-image:radial-gradient(circle,#cbd5e1 1px,transparent 1px);
+  background-size:24px 24px}
+.hint-bar{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text3);margin-bottom:22px;letter-spacing:.04em}
+.hint-bar svg{width:11px;height:11px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;opacity:.8}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:11px}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--accent,#334155);border-radius:var(--r);padding:20px 20px 18px;position:relative;-webkit-user-select:none;user-select:none;
+  box-shadow:0 1px 3px rgba(0,0,0,0.06),0 2px 8px rgba(0,0,0,0.04);transition:background-color .25s}
+.card.sortable-ghost{opacity:.35}
+.card.sortable-chosen{cursor:grabbing}
+.card.sortable-drag{background:var(--surface2);border-color:var(--border3);box-shadow:0 16px 40px rgba(15,23,42,.16)}
+.drag-grip{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:3.5px;cursor:grab;opacity:0;transition:opacity .15s;padding:3px}
+.card:hover .drag-grip{opacity:1}
+.drag-grip span{display:block;width:14px;height:1.5px;background:var(--text3);border-radius:2px}
+.card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;background:#eff6ff}
+.card-icon svg{width:18px;height:18px;stroke:var(--accent);fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.card-name,.card-subtitle{outline:none;border-radius:4px;padding:1px 4px;margin-left:-4px;min-width:10px;display:block}
+.card-name{font-size:16px;font-weight:700;color:var(--text);margin-bottom:2px}
+.card-subtitle{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);margin-bottom:16px}
+.card-name[contenteditable="true"]:hover,.card-subtitle[contenteditable="true"]:hover{background:var(--surface2)}
+.card-name[contenteditable="true"]:focus,.card-subtitle[contenteditable="true"]:focus{background:var(--surface2);outline:1px solid var(--border2)}
+.numbers-list{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+.phone-row{display:flex;align-items:center;gap:5px}
+.call-btn{flex:1;display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid var(--border);border-radius:9px;padding:9px 12px;text-decoration:none;cursor:pointer;transition:background .12s,border-color .12s,box-shadow .12s;min-width:0;gap:8px}
+.call-btn:hover{background:#ecfdf5;border-color:rgba(22,163,74,.4);box-shadow:0 2px 8px rgba(22,163,74,.1)}
+.call-btn.wa:hover{background:#dcfce7;border-color:rgba(22,163,74,.5)}
+.call-num{font-family:var(--mono);font-size:12.5px;font-weight:500;color:#1e293b;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.call-chip{width:22px;height:22px;border-radius:50%;background:var(--green);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 1px 3px rgba(22,163,74,.3)}
+.call-chip.wa-chip{background:#16a34a}
+.call-chip svg{width:11px;height:11px;fill:#fff}
+.phone-editing{display:flex;align-items:center;gap:5px;flex:1}
+.phone-input{flex:1;font-family:var(--mono);font-size:12.5px;background:var(--surface3);border:1px solid var(--border2);border-radius:8px;padding:8px 11px;color:var(--text);outline:none;min-width:0}
+.phone-input:focus{border-color:#B14FFF;box-shadow:0 0 0 3px rgba(177,79,255,.1)}
+.icon-btn{width:30px;height:30px;border-radius:7px;background:none;border:1px solid var(--border);color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .12s;flex-shrink:0}
+.icon-btn svg{width:12px;height:12px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.icon-btn:hover{border-color:var(--border2);color:var(--text2)}
+.icon-btn.del:hover{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.08)}
+.icon-btn.confirm{border-color:#22c55e;color:#22c55e}
+.icon-btn.confirm:hover{background:rgba(34,197,94,.08)}
+.btn-add-phone{width:100%;background:none;border:1px dashed var(--border2);border-radius:8px;padding:8px;color:var(--text3);font-family:var(--font);font-size:11px;font-weight:600;cursor:pointer;transition:all .12s;display:flex;align-items:center;justify-content:center;gap:5px}
+.btn-add-phone svg{width:11px;height:11px;stroke:currentColor;stroke-width:2.5;fill:none;stroke-linecap:round}
+.btn-add-phone:hover{border-color:var(--border3);color:var(--text2);background:var(--surface2)}
+.card-del{position:absolute;bottom:14px;right:14px;background:none;border:none;font-size:17px;line-height:1;color:var(--text3);cursor:pointer;padding:3px 6px;border-radius:5px;transition:all .12s;opacity:0}
+.card:hover .card-del{opacity:1}
+.card-del:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+
+/* ── Modal (contact) ── */
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:200;padding:20px;opacity:0;pointer-events:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.overlay.open{pointer-events:all}
+.modal{background:var(--surface);border:1px solid rgba(0,0,0,0.05);border-radius:18px;padding:30px;width:100%;max-width:430px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.15),0 0 0 1px rgba(0,0,0,0.04)}
+.modal-title{font-size:17px;font-weight:800;letter-spacing:-.02em;color:var(--text);margin-bottom:22px}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin-bottom:6px}
+.field input,.field select{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:10px 13px;color:var(--text);font-family:var(--font);font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s}
+.field input:focus,.field select:focus{border-color:#B14FFF;box-shadow:0 0 0 3px rgba(177,79,255,.1)}
+.field select option{background:#fff}
+.color-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.cswatch{width:27px;height:27px;border-radius:7px;border:2px solid transparent;cursor:pointer;transition:transform .12s,border-color .12s;box-shadow:0 0 0 2px var(--bg)}
+.cswatch:hover{transform:scale(1.12)}
+.cswatch.on{border-color:#0f172a}
+.wa-toggle{display:flex;align-items:center;gap:10px;margin-top:4px}
+.wa-toggle input[type="checkbox"]{width:16px;height:16px;accent-color:#22c55e;cursor:pointer}
+.wa-toggle label{font-size:13px;color:var(--text2);cursor:pointer}
+.modal-footer{display:flex;gap:8px;margin-top:22px}
+.modal-footer .btn-primary{flex:1;justify-content:center}
+.btn-ghost{background:none;color:var(--text2);border:1px solid var(--border2);border-radius:8px;padding:11px 16px;font-family:var(--font);font-size:13px;cursor:pointer;transition:border-color .15s}
+.btn-ghost:hover{border-color:var(--border3)}
+
+/* ── Admin Auth Modal ── */
+.admin-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px;opacity:0;pointer-events:none;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.admin-overlay.open{pointer-events:all}
+.admin-modal{background:var(--surface);border:1px solid rgba(0,0,0,0.06);border-radius:20px;padding:36px;width:100%;max-width:400px;
+  box-shadow:0 24px 64px rgba(0,0,0,0.18),0 0 0 1px rgba(0,0,0,0.04)}
+.admin-modal-header{text-align:center;margin-bottom:28px}
+.admin-modal-icon{width:56px;height:56px;background:linear-gradient(135deg,#B14FFF,#542AAD);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px;
+  box-shadow:0 4px 16px rgba(177,79,255,.3)}
+.admin-modal-icon svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.admin-modal h2{font-size:20px;font-weight:800;letter-spacing:-.03em;color:var(--text);margin-bottom:6px}
+.admin-modal p{font-size:13px;color:var(--text2);line-height:1.5}
+.code-notice{display:flex;align-items:flex-start;gap:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:12px 14px;margin-bottom:20px}
+.code-notice svg{width:15px;height:15px;stroke:#d97706;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0;margin-top:1px}
+.code-notice p{font-size:12px;color:#92400e;line-height:1.5}
+.admin-error{font-size:12px;color:#dc2626;margin-top:6px;display:none}
+.admin-error.show{display:block}
+.admin-session-info{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:20px;display:flex;align-items:center;gap:12px}
+.session-avatar{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#B14FFF,#542AAD);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+.session-details{flex:1;min-width:0}
+.session-name{font-size:14px;font-weight:700;color:var(--text)}
+.session-company{font-size:11px;color:var(--text2);margin-top:2px}
+.btn-danger{background:none;border:1px solid rgba(220,38,38,.3);color:#dc2626;border-radius:8px;padding:8px 14px;font-family:var(--font);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.5)}
+
+/* ── Banners & Footer ── */
+.site-footer{max-width:940px;margin:0 auto;padding:18px 36px 40px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.site-footer span,.site-footer a{font-size:11px;color:var(--text3);text-decoration:none;font-family:var(--mono)}
+.site-footer a:hover{color:var(--text2)}
+.read-only-banner{max-width:940px;margin:0 auto;padding:10px 36px 0}
+.read-only-inner{display:flex;align-items:center;gap:8px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 14px;font-size:11px;color:#b45309}
+.read-only-inner svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;flex-shrink:0}
+
+/* ── Geo banner ── */
+.geo-banner{max-width:940px;margin:0 auto;padding:10px 36px 0}
+.geo-inner{display:flex;align-items:center;gap:8px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 14px;font-size:11px;color:#15803d}
+.geo-inner svg{width:14px;height:14px;stroke:currentColor;stroke-width:2;fill:none;stroke-linecap:round;flex-shrink:0}
+
+/* ── Responsive ── */
+
+/* Tablet: 601px – 900px */
+@media(min-width:601px) and (max-width:900px){
+  .header,.main,.site-footer,.read-only-banner,.geo-banner{padding-left:24px;padding-right:24px}
+  .cards-grid{grid-template-columns:repeat(2,1fr)}
+  .header{padding-top:32px;padding-bottom:24px}
+  .admin-modal{max-width:92vw}
+}
+
+/* Mobile: ≤600px */
+@media(max-width:600px){
+  /* Layout */
+  .header,.main,.site-footer,.read-only-banner,.geo-banner{padding-left:16px;padding-right:16px}
+  .header{padding-top:20px;padding-bottom:18px;position:relative}
+  .main{padding-top:20px;padding-bottom:40px}
+
+  /* Typography */
+  h1{font-size:clamp(26px,8vw,34px);letter-spacing:-.03em}
+
+  /* Header top row */
+  .header-top{flex-direction:column;gap:14px}
+  .header-right{flex-direction:row;align-items:center;justify-content:flex-start;flex-wrap:wrap;width:100%;gap:8px}
+  .btn-mode{font-size:10px;padding:7px 11px}
+  .btn-primary{font-size:12px;padding:9px 16px}
+  .admin-info{font-size:10px;padding:5px 10px}
+
+  /* Role overlay */
+  .role-container{width:95%;padding:0 4px}
+  .role-cards{grid-template-columns:1fr;gap:10px}
+  .role-card{padding:22px 18px}
+  .role-logo{margin-bottom:32px}
+  .role-logo-icon{width:64px;height:64px}
+  .role-logo-icon svg{width:32px;height:32px}
+  .role-title{font-size:clamp(22px,6vw,34px)}
+  .role-subtitle{margin-bottom:28px;font-size:14px}
+
+  /* Cards grid */
+  .cards-grid{grid-template-columns:1fr;gap:10px}
+  .card{padding:16px 16px 14px}
+
+  /* Call buttons */
+  .call-btn{padding:8px 10px}
+  .call-num{font-size:12px}
+
+  /* Modals */
+  .overlay,.admin-overlay{padding:12px;align-items:flex-end}
+  .modal,.admin-modal{border-radius:16px 16px 0 0;padding:24px 20px;max-width:100%;width:100%}
+  .modal-footer{flex-direction:column}
+  .modal-footer .btn-primary,.btn-ghost{width:100%;justify-content:center}
+  .admin-modal{border-radius:20px 20px 0 0}
+
+  /* Footer */
+  .site-footer{flex-direction:column;gap:6px;text-align:center;padding-bottom:28px}
+  .site-footer-powered{text-align:center}
+
+  /* Banners */
+  .read-only-inner,.geo-inner{font-size:10px;padding:7px 12px}
+}
+</style>
+</head>
+<body>
+
+<!-- ROLE OVERLAY -->
+<div class="role-overlay" id="roleOverlay">
+  <div class="role-container">
+    <div class="role-logo" id="roleLogo">
+      <div class="role-logo-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 2.5l-8 4v6c0 4.8 3.4 9.3 8 10.5 4.6-1.2 8-5.7 8-10.5V6.5l-8-4z"/></svg>
+      </div>
+      <h2>Duitama Responde</h2>
+    </div>
+    <h2 class="role-title" id="roleTitle">¿Cómo deseas acceder?</h2>
+    <p class="role-subtitle" id="roleSubtitle">Selecciona tu perfil para continuar.</p>
+    <div class="role-cards">
+      <div class="role-card" id="roleCardUser" onclick="selectRole('user')">
+        <div class="role-card-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <h3>Soy Usuario</h3>
+        <p>Visualiza teléfonos de emergencia y contacta de inmediato.</p>
+      </div>
+      <div class="role-card" id="roleCardBusiness" onclick="openAdminAuth()">
+        <div class="role-card-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <h3>Administrador</h3>
+        <p>Acceso exclusivo con código de autorización previo.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN AUTH MODAL -->
+<div class="admin-overlay" id="adminOverlay" onclick="closeAdminAuthOutside(event)">
+  <div class="admin-modal" id="adminModal">
+    <div class="admin-modal-header">
+      <div class="admin-modal-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+      </div>
+      <h2>Acceso Administrador</h2>
+      <p>Acceso restringido. Código emitido por <strong>AiLink</strong>.</p>
+    </div>
+    <!-- Vista: sin sesión previa -->
+    <div id="adminRegisterView">
+      <div class="code-notice">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <p>El registro requiere un código de acceso suministrado previamente por <strong>AiLink</strong>. Si no lo tienes, escríbenos a <strong>soporte@ailink.com.co</strong> o llama al <strong>316 497 6104</strong>.</p>
+      </div>
+      <div class="field"><label>Nombre completo</label><input type="text" id="a-name" placeholder="Tu nombre"></div>
+      <div class="field"><label>Empresa u organización</label><input type="text" id="a-company" placeholder="Nombre de tu empresa"></div>
+      <div class="field"><label>Código de autorización</label><input type="password" id="a-code" placeholder="Código suministrado por AiLink" autocomplete="off"></div>
+      <p class="admin-error" id="adminError">Código incorrecto. Verifica e intenta de nuevo.</p>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="closeAdminAuth()">Cancelar</button>
+        <button class="btn-primary" onclick="submitAdminAuth()">
+          <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Ingresar
+        </button>
+      </div>
+    </div>
+    <!-- Vista: sesión existente -->
+    <div id="adminSessionView" style="display:none">
+      <div class="admin-session-info">
+        <div class="session-avatar" id="sessionAvatar"></div>
+        <div class="session-details">
+          <div class="session-name" id="sessionName"></div>
+          <div class="session-company" id="sessionCompany"></div>
+        </div>
+      </div>
+      <div class="modal-footer" style="flex-direction:column;gap:10px">
+        <button class="btn-primary" style="justify-content:center" onclick="enterAdminMode()">
+          <svg viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10,17 15,12 10,7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>Continuar como administrador
+        </button>
+        <button class="btn-danger" onclick="clearAdminSession()" style="width:100%;text-align:center">Cerrar sesión y usar otro código</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-top">
+    <div>
+      <div class="badge" id="headerBadge"><span class="pulse-dot" id="pulseDot"></span>Líneas activas 24/7</div>
+      <h1 id="headerTitle">Emergencias<br><em>Duitama</em></h1>
+      <p class="header-sub" id="headerSub">Directorio oficial de atención inmediata para ciudadanos, empresas y equipos de respuesta.</p>
+    </div>
+    <div class="header-right" id="headerRight">
+      <button class="btn-mode" id="btnMode" onclick="handleModeChange()">
+        <svg viewBox="0 0 24 24"><polyline points="1,4 1,10 7,10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+        <span id="modeLabel">Modo: Usuario</span>
+      </button>
+      <div class="admin-info" id="adminInfoBar" style="display:none">
+        Admin: <strong id="adminInfoName"></strong>
+        <button class="btn-logout" onclick="logoutAdmin()">Salir</button>
+      </div>
+      <button class="btn-primary" id="addBtn" onclick="openModal()" style="display:none;">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar contacto
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- BANNERS -->
+<div class="geo-banner" id="geoBanner" style="display:none">
+  <div class="geo-inner">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+    <span id="geoText">Ubicación detectada en Colombia — acceso directo activado</span>
+  </div>
+</div>
+<div class="read-only-banner" id="readOnlyBanner">
+  <div class="read-only-inner">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Modo lectura — ingresa como Administrador para editar contenido
+  </div>
+</div>
+
+<main class="main">
+  <div class="hint-bar" id="hintBar" style="display:none;">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Arrastra para reordenar · Clic en nombre o subtítulo para editar
+  </div>
+  <div class="cards-grid" id="grid"></div>
+</main>
+
+<footer class="site-footer">
+  <span>AiLink &mdash; Duitama, Boyacá</span>
+  <span class="site-footer-powered" style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text3);font-family:var(--mono)">
+    Tecnología
+    <span style="background:linear-gradient(135deg,#B14FFF,#542AAD);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-weight:700;">AiLink</span>
+    &bull; <a href="tel:3164976104" style="color:var(--text3);text-decoration:none;">316 497 6104</a>
+  </span>
+  <a href="tel:3106951743">PQRS · 31</a>
+</footer>
+
+<!-- MODAL ADD CONTACT -->
+<div class="overlay" id="overlay" onclick="closeModalOutside(event)">
+  <div class="modal" id="modal">
+    <div class="modal-title">Nuevo contacto</div>
+    <div class="field"><label>Organización</label><input type="text" id="m-name" placeholder="Ej: Alcaldía Municipal"></div>
+    <div class="field"><label>Tipo de servicio</label><input type="text" id="m-sub" placeholder="Ej: Urgencias, Emergencias..."></div>
+    <div class="field"><label>Número principal</label><input type="tel" id="m-phone" placeholder="Ej: 314 000 0000"></div>
+    <div class="field">
+      <label>Icono</label>
+      <select id="m-icon" aria-label="Seleccionar icono" title="Seleccionar icono">
+        <option value="shield">Escudo</option><option value="star">Insignia</option><option value="flame">Llama</option><option value="cross">Cruz</option><option value="bolt">Rayo</option><option value="drop">Gota</option><option value="wrench">Herramienta</option><option value="hospital">Hospital</option><option value="phone">Teléfono</option><option value="car">Vehículo</option>
+      </select>
+    </div>
+    <div class="field"><label>Color de acento</label><div class="color-row" id="m-colors"></div></div>
+    <div class="wa-toggle"><input type="checkbox" id="m-wa"><label for="m-wa">Número de WhatsApp</label></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="submitNew()"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+gsap.registerPlugin(ScrollTrigger);
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ── INVITE CODE — cambia este valor para revocar accesos anteriores ──────────
+const INVITE_CODE = 'AiLinkCol2025';
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function hexToRgba(hex, alpha) {
+  if (!hex || !hex.startsWith('#')) return `rgba(100,100,100,${alpha})`;
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+// ── Icons ────────────────────────────────────────────────────────────────────
+const ICONS = {
+  shield:`<path d="M12 2.5l-8 4v6c0 4.8 3.4 9.3 8 10.5 4.6-1.2 8-5.7 8-10.5V6.5l-8-4z"/>`,
+  star:`<polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/>`,
+  flame:`<path d="M8.5 14.5A5.5 5.5 0 0019 9c0-4-4-7-7-11C9 2 6 5 6 8.5a6 6 0 002.5 6z"/><path d="M12 18v-3"/>`,
+  cross:`<line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/>`,
+  bolt:`<polygon points="13,2 4,14 11,14 10,22 19,10 12,10"/>`,
+  drop:`<path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/>`,
+  wrench:`<path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3-3a6 6 0 01-7.1 7.1l-6.2 6.2a2 2 0 01-2.8-2.8l6.2-6.2a6 6 0 017.1-7.1l-3 3z"/>`,
+  hospital:`<rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>`,
+  phone:`<path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z"/>`,
+  car:`<rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 5v3h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>`
+};
+const PHONE_SVG = `<svg viewBox="0 0 24 24"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1-9.4 0-17-7.6-17-17 0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" fill="#fff"/></svg>`;
+const WA_SVG = `<svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884" fill="#fff"/></svg>`;
+
+const COLORS = ['#dc2626','#f97316','#eab308','#16a34a','#0ea5e9','#2563eb','#8b5cf6','#ec4899','#6b7280','#fbbf24'];
+
+const DEFAULTS = [
+  {id:1, name:'Policía Nacional',    sub:'Línea de emergencia', icon:'star',     color:'#16a34a', phones:[{num:'123',type:'call'},{num:'314 317 6387',type:'call'}]},
+  {id:2, name:'Bomberos Duitama',    sub:'Emergencias',         icon:'flame',    color:'#dc2626', phones:[{num:'119',type:'call'},{num:'760 2749',type:'call'}]},
+  {id:3, name:'Cruz Roja',           sub:'Emergencias médicas', icon:'cross',    color:'#ef4444', phones:[{num:'313 300 7105',type:'call'}]},
+  {id:4, name:'Defensa Civil',       sub:'Emergencia general',  icon:'shield',   color:'#f97316', phones:[{num:'322 793 8103',type:'call'}]},
+  {id:5, name:'Asotraind Taxis',     sub:'Transporte seguro',   icon:'car',      color:'#eab308', phones:[{num:'310 695 1743',type:'call'},{num:'310 695 1743',type:'whatsapp'}]},
+  {id:6, name:'Hospital Regional',   sub:'Urgencias 24/7',      icon:'hospital', color:'#0ea5e9', phones:[{num:'760 3900',type:'call'}]},
+  {id:7, name:'Empoduitama',         sub:'Acueducto y alcant.', icon:'drop',     color:'#6b7280', phones:[{num:'760 5050',type:'call'}]},
+  {id:8, name:'EBSA Energía',        sub:'Emergencias eléctr.', icon:'bolt',     color:'#fbbf24', phones:[{num:'018000 919 101',type:'call'}]},
+];
+
+let data        = JSON.parse(localStorage.getItem('probando_emg_data') || JSON.stringify(DEFAULTS));
+let nid         = (data.length ? Math.max(...data.map(c=>c.id)) : 0) + 1;
+let selColor    = '#dc2626';
+let currentRole = 'user';
+
+function save(){ localStorage.setItem('probando_emg_data', JSON.stringify(data)); }
+function isBusiness(){ return currentRole === 'business'; }
+
+// ── Admin session ─────────────────────────────────────────────────────────────
+function getAdminSession(){ return JSON.parse(localStorage.getItem('probando_admin_session') || 'null'); }
+function setAdminSession(s){ localStorage.setItem('probando_admin_session', JSON.stringify(s)); }
+function clearAdminSession(){
+  localStorage.removeItem('probando_admin_session');
+  document.getElementById('adminRegisterView').style.display = '';
+  document.getElementById('adminSessionView').style.display = 'none';
+  document.getElementById('a-name').value = '';
+  document.getElementById('a-code').value = '';
+  document.getElementById('adminError').classList.remove('show');
+}
+
+// ── Admin auth modal ──────────────────────────────────────────────────────────
+function openAdminAuth(){
+  const session = getAdminSession();
+  if(session){
+    document.getElementById('adminRegisterView').style.display = 'none';
+    document.getElementById('adminSessionView').style.display = '';
+    document.getElementById('sessionAvatar').textContent = session.name.charAt(0).toUpperCase();
+    document.getElementById('sessionName').textContent = session.name;
+    document.getElementById('sessionCompany').textContent = session.company;
+  } else {
+    document.getElementById('adminRegisterView').style.display = '';
+    document.getElementById('adminSessionView').style.display = 'none';
+  }
+  const el = document.getElementById('adminOverlay');
+  const modal = document.getElementById('adminModal');
+  el.classList.add('open');
+  if(!prefersReduced){
+    gsap.fromTo(el, {opacity:0}, {opacity:1, duration:0.22, ease:'power2.out'});
+    gsap.fromTo(modal, {opacity:0,scale:0.93,y:18}, {opacity:1,scale:1,y:0, duration:0.32, ease:'back.out(1.4)'});
+  }
+}
+
+function closeAdminAuth(){
+  const el = document.getElementById('adminOverlay');
+  const modal = document.getElementById('adminModal');
+  if(!prefersReduced){
+    gsap.to(modal, {opacity:0,scale:0.93,y:14,duration:0.2,ease:'power2.in',onComplete:()=>{
+      el.classList.remove('open');
+      gsap.set(modal,{opacity:1,scale:1,y:0});
+    }});
+    gsap.to(el, {opacity:0,duration:0.22,ease:'power2.in'});
+  } else {
+    el.classList.remove('open');
+  }
+}
+
+function closeAdminAuthOutside(e){ if(e.target===document.getElementById('adminOverlay')) closeAdminAuth(); }
+
+function submitAdminAuth(){
+  const name    = document.getElementById('a-name').value.trim();
+  const company = document.getElementById('a-company').value.trim();
+  const code    = document.getElementById('a-code').value.trim();
+  const errEl   = document.getElementById('adminError');
+
+  if(!name || !company || !code){ errEl.textContent='Completa todos los campos.'; errEl.classList.add('show'); return; }
+  if(code !== INVITE_CODE){ errEl.textContent='Código incorrecto. Verifica e intenta de nuevo.'; errEl.classList.add('show'); return; }
+
+  errEl.classList.remove('show');
+  setAdminSession({name, company, registeredAt: new Date().toISOString()});
+  enterAdminMode();
+}
+
+function enterAdminMode(){
+  closeAdminAuth();
+  currentRole = 'business';
+  const overlay = document.getElementById('roleOverlay');
+  if(!prefersReduced){
+    gsap.to(overlay, {opacity:0, duration:0.4, ease:'power2.inOut', onComplete:()=>{
+      overlay.classList.add('hidden');
+      gsap.set(overlay,{opacity:1});
+      applyRole(); render(); animateHeader();
+    }});
+  } else {
+    overlay.classList.add('hidden');
+    applyRole(); render();
+  }
+}
+
+function logoutAdmin(){
+  currentRole = 'user';
+  clearAdminSession();
+  applyRole(); render();
+  const overlay = document.getElementById('roleOverlay');
+  overlay.classList.remove('hidden');
+  if(!prefersReduced){
+    gsap.fromTo(overlay,{opacity:0},{opacity:1,duration:0.35,ease:'power2.out'});
+    animateRoleOverlay();
+  }
+}
+
+// ── Role logic ────────────────────────────────────────────────────────────────
+function selectRole(role){
+  currentRole = role;
+  const overlay = document.getElementById('roleOverlay');
+  if(!prefersReduced){
+    gsap.to(overlay, {opacity:0, duration:0.4, ease:'power2.inOut', onComplete:()=>{
+      overlay.classList.add('hidden');
+      gsap.set(overlay,{opacity:1});
+      applyRole(); render(); animateHeader();
+    }});
+  } else {
+    overlay.classList.add('hidden');
+    applyRole(); render();
+  }
+}
+
+function handleModeChange(){
+  if(isBusiness()){
+    logoutAdmin();
+  } else {
+    openAdminAuth();
+  }
+}
+
+function applyRole(){
+  const addBtn         = document.getElementById('addBtn');
+  const hintBar        = document.getElementById('hintBar');
+  const readOnlyBanner = document.getElementById('readOnlyBanner');
+  const modeLabel      = document.getElementById('modeLabel');
+  const adminInfoBar   = document.getElementById('adminInfoBar');
+  const session        = getAdminSession();
+
+  if(isBusiness()){
+    addBtn.style.display = '';
+    hintBar.style.display = '';
+    readOnlyBanner.style.display = 'none';
+    modeLabel.textContent = 'Modo: Administrador';
+    if(session){
+      adminInfoBar.style.display = '';
+      document.getElementById('adminInfoName').textContent = session.name;
+    }
+  } else {
+    addBtn.style.display = 'none';
+    hintBar.style.display = 'none';
+    readOnlyBanner.style.display = '';
+    modeLabel.textContent = 'Modo: Usuario';
+    adminInfoBar.style.display = 'none';
+  }
+}
+
+// ── Phone helpers ─────────────────────────────────────────────────────────────
+function phoneHref(num, type){
+  const n = num.replace(/\s/g,'');
+  return type==='whatsapp' ? `https://wa.me/57${n.startsWith('0')?n.slice(1):n}` : `tel:${n}`;
+}
+function updateField(cid,field,val){ const c=data.find(x=>x.id===cid); if(c&&val.trim()){c[field]=val.trim();save();} }
+
+function deleteCard(cid){
+  if(!isBusiness()) return;
+  if(!confirm('¿Eliminar este contacto?')) return;
+  const el = document.getElementById(`card-${cid}`);
+  if(el&&!prefersReduced){
+    gsap.to(el,{opacity:0,scale:0.9,duration:0.22,ease:'power2.in',onComplete:()=>{el.remove();data=data.filter(x=>x.id!==cid);save();}});
+  } else { data=data.filter(x=>x.id!==cid); save(); el?.remove(); }
+}
+
+function buildPhoneRow(c,p,pi,editable){
+  const div=document.createElement('div'); div.className='phone-row';
+  const chip=`<span class="call-chip ${p.type==='whatsapp'?'wa-chip':''}">${p.type==='whatsapp'?WA_SVG:PHONE_SVG}</span>`;
+  const a=document.createElement('a');
+  a.className='call-btn'+(p.type==='whatsapp'?' wa':'');
+  a.href=phoneHref(p.num,p.type); a.target='_blank';
+  a.innerHTML=`<span class="call-num">${p.num}</span>${chip}`;
+  div.appendChild(a);
+  if(!prefersReduced){
+    const chipEl=a.querySelector('.call-chip');
+    a.addEventListener('mouseenter',()=>gsap.to(chipEl,{scale:1.2,duration:0.22,ease:'back.out(2)'}));
+    a.addEventListener('mouseleave',()=>gsap.to(chipEl,{scale:1,duration:0.18,ease:'power2.out'}));
+  }
+  if(editable){
+    const editBtn=document.createElement('button'); editBtn.className='icon-btn'; editBtn.title='Editar número';
+    editBtn.innerHTML=`<svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4z"/></svg>`;
+    editBtn.onclick=()=>startEditPhone(c.id,pi);
+    const delBtn=document.createElement('button'); delBtn.className='icon-btn del'; delBtn.title='Eliminar número';
+    delBtn.innerHTML=`<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+    delBtn.onclick=()=>removePhone(c.id,pi);
+    div.append(editBtn,delBtn);
+  }
+  return div;
+}
+
+function buildEditPhoneRow(c,p,pi){
+  const div=document.createElement('div'); div.className='phone-row';
+  const wrap=document.createElement('div'); wrap.className='phone-editing';
+  const input=document.createElement('input'); input.type='tel'; input.className='phone-input'; input.value=p.num;
+  input.onkeydown=e=>{if(e.key==='Enter')confirmEditPhone(c.id,pi,input.value);if(e.key==='Escape')renderCard(c);};
+  const ok=document.createElement('button'); ok.className='icon-btn confirm';
+  ok.innerHTML=`<svg viewBox="0 0 24 24"><polyline points="20,6 9,17 4,12"/></svg>`;
+  ok.onclick=()=>confirmEditPhone(c.id,pi,input.value);
+  const cancel=document.createElement('button'); cancel.className='icon-btn';
+  cancel.innerHTML=`<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+  cancel.onclick=()=>renderCard(c);
+  wrap.append(input,ok,cancel); div.append(wrap);
+  requestAnimationFrame(()=>input.focus()); return div;
+}
+function startEditPhone(cid,pi){ if(!isBusiness())return; const c=data.find(x=>x.id===cid); if(!c)return; const list=document.getElementById(`phones-${cid}`); const rows=list.querySelectorAll('.phone-row'); if(rows[pi])rows[pi].replaceWith(buildEditPhoneRow(c,c.phones[pi],pi)); }
+function confirmEditPhone(cid,pi,val){ const c=data.find(x=>x.id===cid); if(!c||!isBusiness())return; if(val.trim())c.phones[pi].num=val.trim(); save(); renderCard(c); }
+function removePhone(cid,pi){ if(!isBusiness())return; const c=data.find(x=>x.id===cid); if(!c)return; c.phones.splice(pi,1); save(); renderCard(c); }
+function addPhone(cid){ if(!isBusiness())return; const c=data.find(x=>x.id===cid); if(!c)return; const num=prompt('Número de teléfono:'); if(!num||!num.trim())return; const type=confirm('¿Es número de WhatsApp?')?'whatsapp':'call'; c.phones.push({num:num.trim(),type}); save(); renderCard(c); }
+
+// ── Card rendering ────────────────────────────────────────────────────────────
+function renderCard(c){
+  const existing=document.getElementById(`card-${c.id}`);
+  const editable=isBusiness();
+  const card=document.createElement('div');
+  card.className='card'; card.id=`card-${c.id}`;
+  card.style.setProperty('--accent',c.color);
+
+  if(editable){
+    const grip=document.createElement('div'); grip.className='drag-grip';
+    grip.innerHTML='<span></span><span></span><span></span>'; card.appendChild(grip);
+  }
+
+  const icon=document.createElement('div'); icon.className='card-icon';
+  icon.style.background=hexToRgba(c.color,0.10);
+  icon.innerHTML=`<svg viewBox="0 0 24 24">${ICONS[c.icon]||ICONS.phone}</svg>`;
+
+  const name=document.createElement('div'); name.className='card-name'; name.textContent=c.name;
+  if(editable){ name.contentEditable='true'; name.onblur=()=>updateField(c.id,'name',name.textContent); name.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();name.blur();}}; }
+
+  const sub=document.createElement('div'); sub.className='card-subtitle'; sub.textContent=c.sub;
+  if(editable){ sub.contentEditable='true'; sub.onblur=()=>updateField(c.id,'sub',sub.textContent); sub.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();sub.blur();}}; }
+
+  const list=document.createElement('div'); list.className='numbers-list'; list.id=`phones-${c.id}`;
+  c.phones.forEach((p,pi)=>list.appendChild(buildPhoneRow(c,p,pi,editable)));
+  card.append(icon,name,sub,list);
+
+  if(editable){
+    const addBtn=document.createElement('button'); addBtn.className='btn-add-phone';
+    addBtn.innerHTML=`<svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Agregar número`;
+    addBtn.onclick=()=>addPhone(c.id); card.appendChild(addBtn);
+    const delCard=document.createElement('button'); delCard.className='card-del'; delCard.innerHTML='&times;';
+    delCard.onclick=()=>deleteCard(c.id); card.appendChild(delCard);
+  }
+
+  // GSAP hover: color wash + elevation
+  if(!prefersReduced){
+    card.addEventListener('mouseenter',()=>{
+      gsap.to(card,{
+        y: -5,
+        backgroundColor: hexToRgba(c.color, 0.06),
+        boxShadow: `0 12px 32px ${hexToRgba(c.color,0.20)}, 0 0 0 1.5px ${hexToRgba(c.color,0.35)}`,
+        duration: 0.28,
+        ease: 'power2.out'
+      });
+    });
+    card.addEventListener('mouseleave',()=>{
+      gsap.to(card,{
+        y: 0,
+        backgroundColor: '#ffffff',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
+        duration: 0.22,
+        ease: 'power2.inOut'
+      });
+    });
+  }
+
+  if(existing){ existing.replaceWith(card); } else { document.getElementById('grid').appendChild(card); }
+  return card;
+}
+
+function render(){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  data.forEach(c=>renderCard(c));
+  if(isBusiness()) initSortable();
+  if(!prefersReduced){
+    const cards=grid.querySelectorAll('.card');
+    gsap.from(cards,{opacity:0,y:32,scale:0.96,duration:0.45,ease:'power3.out',stagger:{amount:0.35,from:'start'},clearProps:'transform,opacity'});
+  }
+}
+
+function initSortable(){
+  Sortable.create(document.getElementById('grid'),{
+    animation:180,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',dragClass:'sortable-drag',handle:'.drag-grip',
+    onEnd(e){ const moved=data.splice(e.oldIndex,1)[0]; data.splice(e.newIndex,0,moved); save(); }
+  });
+}
+
+// ── Modal (contact) ───────────────────────────────────────────────────────────
+function openModal(){
+  if(!isBusiness()) return;
+  const el=document.getElementById('overlay'); const m=document.getElementById('modal');
+  el.classList.add('open');
+  if(!prefersReduced){
+    gsap.fromTo(el,{opacity:0},{opacity:1,duration:0.22,ease:'power2.out'});
+    gsap.fromTo(m,{opacity:0,scale:0.93,y:18},{opacity:1,scale:1,y:0,duration:0.32,ease:'back.out(1.4)'});
+  }
+  document.getElementById('m-name').focus();
+}
+function closeModal(){
+  const el=document.getElementById('overlay'); const m=document.getElementById('modal');
+  if(!prefersReduced){
+    gsap.to(m,{opacity:0,scale:0.93,y:14,duration:0.2,ease:'power2.in',onComplete:()=>{el.classList.remove('open');gsap.set(m,{opacity:1,scale:1,y:0});}});
+    gsap.to(el,{opacity:0,duration:0.22,ease:'power2.in'});
+  } else { el.classList.remove('open'); }
+}
+function closeModalOutside(e){ if(e.target===document.getElementById('overlay'))closeModal(); }
+
+function initColorPicker(){
+  const row=document.getElementById('m-colors');
+  COLORS.forEach(c=>{
+    const sw=document.createElement('div');
+    sw.className='cswatch'+(c===selColor?' on':'');
+    sw.style.background=c;
+    sw.onclick=()=>{ selColor=c; row.querySelectorAll('.cswatch').forEach(s=>s.classList.remove('on')); sw.classList.add('on'); };
+    row.appendChild(sw);
+  });
+}
+
+function submitNew(){
+  if(!isBusiness()) return;
+  const name=document.getElementById('m-name').value.trim();
+  const sub=document.getElementById('m-sub').value.trim();
+  const phone=document.getElementById('m-phone').value.trim();
+  const icon=document.getElementById('m-icon').value;
+  const isWa=document.getElementById('m-wa').checked;
+  if(!name||!phone){alert('Organización y número son obligatorios.');return;}
+  const c={id:nid++,name,sub:sub||'Contacto',icon,color:selColor,phones:[{num:phone,type:isWa?'whatsapp':'call'}]};
+  data.push(c); save();
+  const newCard=renderCard(c);
+  if(!prefersReduced){ gsap.from(newCard,{opacity:0,scale:0.88,y:20,duration:0.38,ease:'back.out(1.6)',clearProps:'transform,opacity'}); }
+  closeModal();
+  document.getElementById('m-name').value='';
+  document.getElementById('m-sub').value='';
+  document.getElementById('m-phone').value='';
+  document.getElementById('m-wa').checked=false;
+}
+
+// ── GSAP animations ───────────────────────────────────────────────────────────
+function animateHeader(){
+  if(prefersReduced) return;
+  const tl=gsap.timeline({defaults:{ease:'power3.out'}});
+  tl.from('#headerBadge',{opacity:0,y:-14,duration:0.4})
+    .from('#headerTitle',{opacity:0,y:22,duration:0.5},'-=0.18')
+    .from('#headerSub',{opacity:0,y:14,duration:0.4},'-=0.24')
+    .from('#headerRight > *',{opacity:0,x:18,duration:0.35,stagger:0.1},'-=0.28');
+}
+function animateRoleOverlay(){
+  if(prefersReduced) return;
+  const tl=gsap.timeline({defaults:{ease:'power3.out'}});
+  tl.from('#roleLogo .role-logo-icon',{opacity:0,scale:0.6,duration:0.5,ease:'back.out(2)'})
+    .from('#roleLogo h2',{opacity:0,y:10,duration:0.35},'-=0.2')
+    .from('#roleTitle',{opacity:0,y:24,duration:0.42},'-=0.1')
+    .from('#roleSubtitle',{opacity:0,y:14,duration:0.36},'-=0.22')
+    .from(['#roleCardUser','#roleCardBusiness'],{opacity:0,y:36,duration:0.44,stagger:0.12},'-=0.18');
+}
+function initPulseDot(){
+  if(prefersReduced) return;
+  const dot=document.getElementById('pulseDot');
+  dot.style.animation='none';
+  gsap.to(dot,{opacity:0.15,scale:1.5,duration:1,ease:'sine.inOut',repeat:-1,yoyo:true});
+}
+
+// ── Geolocation ───────────────────────────────────────────────────────────────
+function detectLocation(){
+  if(!navigator.geolocation){ showRoleOverlay(); return; }
+  navigator.geolocation.getCurrentPosition(
+    (pos)=>{
+      const {latitude:lat, longitude:lon} = pos.coords;
+      // Bounding box de Colombia
+      const inColombia = lat>=-4.2 && lat<=12.5 && lon>=-81.7 && lon<=-66.9;
+      if(inColombia){
+        // Auto-entrar en modo usuario
+        currentRole='user';
+        const overlay=document.getElementById('roleOverlay');
+        overlay.classList.add('hidden');
+        const geoBanner=document.getElementById('geoBanner');
+        geoBanner.style.display='';
+        applyRole(); render(); animateHeader();
+        // Ocultar banner después de 5s
+        setTimeout(()=>{ gsap.to(geoBanner,{opacity:0,height:0,duration:0.5,onComplete:()=>geoBanner.style.display='none'}); },5000);
+      } else {
+        showRoleOverlay();
+      }
+    },
+    ()=>{ showRoleOverlay(); },
+    {timeout:6000, maximumAge:300000}
+  );
+}
+
+function showRoleOverlay(){
+  const overlay=document.getElementById('roleOverlay');
+  overlay.classList.remove('hidden');
+  animateRoleOverlay();
+}
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  applyRole();
+  initColorPicker();
+  initPulseDot();
+  detectLocation();
+});
+</script>
+</body>
+</html>
