@@ -88,34 +88,34 @@ export function DirectoryView({ lang = 'es' }: DirectoryViewProps) {
   );
   
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
-      className="max-w-[1600px] mx-auto space-y-16 pb-20 px-4 relative"
+      className="max-w-[1600px] mx-auto pb-20 px-4 relative"
     >
       <AnimatePresence>
         {isFormOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsFormOpen(false)}
               className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
-            <ContactForm 
-              initialData={editingContact || {}} 
-              onSave={handleSave} 
-              onCancel={() => { setIsFormOpen(false); setEditingContact(null); }} 
+            <ContactForm
+              initialData={editingContact || {}}
+              onSave={handleSave}
+              onCancel={() => { setIsFormOpen(false); setEditingContact(null); }}
             />
           </div>
         )}
       </AnimatePresence>
 
       {isAdmin && (
-        <div className="flex justify-end sticky top-0 z-20 pt-2 pb-4 bg-surface/80 backdrop-blur-sm">
-          <button 
+        <div className="flex justify-end sticky top-0 z-20 pt-2 pb-4 bg-surface">
+          <button
             onClick={() => setIsFormOpen(true)}
             className="flex items-center gap-3 bg-primary text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:brightness-110 active:scale-95 transition-all border-b-4 border-black/20"
           >
@@ -125,47 +125,53 @@ export function DirectoryView({ lang = 'es' }: DirectoryViewProps) {
         </div>
       )}
 
-      {categories.map((cat) => {
-        const catContacts = localContacts.filter(c => (c.service_type || 'Otros') === cat);
-        const color = getColor(cat);
+      {/* Categorías en columnas: cada categoría ocupa su propia celda en el grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 items-start mt-4">
+        {categories.map((cat) => {
+          const catContacts = localContacts.filter(c => (c.service_type || 'Otros') === cat);
+          const color = getColor(cat);
 
-        return (
-          <section key={cat} className="space-y-8">
-            <div className="flex items-center gap-4 border-b-2 border-outline-variant pb-3">
-              <div style={{ color }} className="p-2 bg-surface-container-low rounded-xl shadow-sm">{getIcon(cat)}</div>
-              <h3 className="text-sm md:text-base font-black uppercase tracking-[0.3em]" style={{ color }}>{cat}</h3>
-              <div className="h-px flex-1 bg-outline-variant/30 ml-4" />
-              <span className="text-[10px] font-black text-on-surface-variant/40 ml-4 uppercase tracking-widest">{catContacts.length} UNIDADES ACTIVAS</span>
-            </div>
-            
-            {isAdmin ? (
-              <Reorder.Group 
-                axis="y" 
-                values={catContacts} 
-                onReorder={(newOrder) => handleReorder(newOrder, cat)}
-                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6"
-              >
-                {catContacts.map((contact) => (
-                  <Reorder.Item key={contact.id} value={contact}>
-                    <ContactCard 
-                      contact={contact} 
-                      isAdmin={true}
-                      onEdit={(c) => { setEditingContact(c); setIsFormOpen(true); }}
-                      onDelete={(id) => { if(confirm(t.confirm_delete)) deleteContact(id); }}
-                    />
-                  </Reorder.Item>
-                ))}
-              </Reorder.Group>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-                {catContacts.map((contact) => (
-                  <ContactCard key={contact.id} contact={contact} isAdmin={false} />
-                ))}
+          return (
+            <section key={cat} className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-outline-variant pb-2">
+                <div style={{ color }} className="p-1.5 bg-surface-container-low rounded-xl shadow-sm shrink-0">
+                  {getIcon(cat)}
+                </div>
+                <h3 className="text-xs font-black uppercase tracking-[0.2em] truncate" style={{ color }}>{cat}</h3>
+                <span className="text-[9px] font-black text-on-surface-variant/40 ml-auto uppercase tracking-widest shrink-0">
+                  {catContacts.length}u
+                </span>
               </div>
-            )}
-          </section>
-        );
-      })}
+
+              {isAdmin ? (
+                <Reorder.Group
+                  axis="y"
+                  values={catContacts}
+                  onReorder={(newOrder) => handleReorder(newOrder, cat)}
+                  className="space-y-4"
+                >
+                  {catContacts.map((contact) => (
+                    <Reorder.Item key={contact.id} value={contact}>
+                      <ContactCard
+                        contact={contact}
+                        isAdmin={true}
+                        onEdit={(c) => { setEditingContact(c); setIsFormOpen(true); }}
+                        onDelete={(id) => { if(confirm(t.confirm_delete)) deleteContact(id); }}
+                      />
+                    </Reorder.Item>
+                  ))}
+                </Reorder.Group>
+              ) : (
+                <div className="space-y-4">
+                  {catContacts.map((contact) => (
+                    <ContactCard key={contact.id} contact={contact} isAdmin={false} />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
+      </div>
 
       {localContacts.length === 0 && !loading && (
         <div className="text-center py-32 bg-surface-container-low rounded-3xl border-4 border-dashed border-outline-variant">

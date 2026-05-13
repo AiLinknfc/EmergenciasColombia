@@ -48,7 +48,10 @@ export function ContactCard({ contact, isAdmin, onEdit, onDelete }: ContactCardP
               </div>
             )}
 
-            <div className="p-4 flex gap-3 flex-1 min-w-0">
+            <div
+              className="p-4 flex gap-3 flex-1 min-w-0 cursor-pointer"
+              onClick={() => setIsFlipped(true)}
+            >
               <div className="w-16 h-16 rounded-xl overflow-hidden bg-surface-container-high shrink-0 border border-outline-variant/30">
                 {contact.image_url ? (
                   <img 

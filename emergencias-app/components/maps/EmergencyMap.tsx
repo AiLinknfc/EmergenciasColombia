@@ -26,7 +26,8 @@ export function EmergencyMap({ contacts, onContactClick, className = '' }: Emerg
   const COLOMBIA_CENTER = { lat: 4.5709, lng: -74.2973 }
 
   const initMap = useCallback(() => {
-    if (!mapRef.current || !window.google) return
+    if (!mapRef.current || !window.google?.maps) return
+    if (!(mapRef.current instanceof Element)) return
 
     try {
       const map = new window.google.maps.Map(mapRef.current, {
@@ -94,21 +95,38 @@ export function EmergencyMap({ contacts, onContactClick, className = '' }: Emerg
   }, [contacts, onContactClick]) // COLOMBIA_CENTER is local const inside component, could be moved outside or omitted
 
   useEffect(() => {
-    if (!isGoogleMapsConfigured()) {
-      // Avoid calling setState in effect directly if it causes render issues, but here it is fine if it only happens once.
-      // Actually to fix 'set-state-in-effect', we can just let the render handle the missing key.
-      return
+    if (!isGoogleMapsConfigured()) return
+
+    // gm_authFailure es el hook oficial de Google Maps para errores de API key.
+    // Registrarlo ANTES de cargar el script evita el cascade de IntersectionObserver.
+    ;(window as any).gm_authFailure = () => {
+      setError('API key no autorizada para este dominio. Agrega la URL en Google Cloud Console → Credenciales.')
     }
 
-    let isMounted = true;
-    loadGoogleMapsScript(() => {
-      if (isMounted) {
-        setMapLoaded(true)
-        initMap()
+    // Captura el unhandledRejection como segunda línea de defensa
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      const msg: string = event.reason?.message || ''
+      if (msg.includes('IntersectionObserver') || msg.includes('RefererNotAllowed')) {
+        event.preventDefault()
+        setError('API key no autorizada para este dominio. Agrega la URL en Google Cloud Console → Credenciales.')
       }
+    }
+    window.addEventListener('unhandledrejection', handleRejection)
+
+    let isMounted = true
+    loadGoogleMapsScript(() => {
+      if (!isMounted) return
+      setMapLoaded(true)
+      requestAnimationFrame(() => {
+        if (isMounted) initMap()
+      })
     })
 
-    return () => { isMounted = false; }
+    return () => {
+      isMounted = false
+      window.removeEventListener('unhandledrejection', handleRejection)
+      delete (window as any).gm_authFailure
+    }
   }, [initMap])
 
   if (!isGoogleMapsConfigured()) {

@@ -8,17 +8,32 @@ export const getGoogleMapsApiKey = (): string => {
   return process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 }
 
-// Cargar Google Maps Script dinámicamente
+// Cargar Google Maps Script dinámicamente con cola de callbacks para evitar sobreescritura
 export const loadGoogleMapsScript = (callback: () => void): void => {
   if (!isGoogleMapsConfigured()) {
     console.warn('Google Maps API key no configurada')
     return
   }
 
-  const existingScript = document.getElementById('google-maps-script')
-  if (existingScript) {
+  // Ya está completamente cargado
+  if ((window as any).google?.maps) {
     callback()
     return
+  }
+
+  // El script ya existe (está cargando) — encolar el callback
+  const existingScript = document.getElementById('google-maps-script')
+  if (existingScript) {
+    ;(window as any)._gmapsCallbacks = [...((window as any)._gmapsCallbacks || []), callback]
+    return
+  }
+
+  // Primera carga: inicializar la cola y el handler global
+  ;(window as any)._gmapsCallbacks = [callback]
+  ;(window as any).onGoogleMapsLoaded = () => {
+    const queue: (() => void)[] = (window as any)._gmapsCallbacks || []
+    ;(window as any)._gmapsCallbacks = []
+    queue.forEach(cb => cb())
   }
 
   const script = document.createElement('script')
@@ -26,10 +41,7 @@ export const loadGoogleMapsScript = (callback: () => void): void => {
   script.src = `https://maps.googleapis.com/maps/api/js?key=${getGoogleMapsApiKey()}&libraries=places&callback=onGoogleMapsLoaded`
   script.async = true
   script.defer = true
-  
-  // Definir callback global
-  ;(window as any).onGoogleMapsLoaded = callback
-  
+
   document.head.appendChild(script)
 }
 
