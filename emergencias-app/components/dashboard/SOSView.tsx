@@ -6,6 +6,7 @@ import {
   Send, ChevronLeft, CheckCircle, Loader2, Smartphone
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SOSAlert } from '@/hooks/useSOSAlerts'
 
 type SOSPhase = 'idle' | 'recording' | 'preview' | 'sending' | 'sent'
 
@@ -13,10 +14,11 @@ interface LocationData { lat: number; lng: number }
 
 interface SOSViewProps {
   onCancel: () => void
+  onAlertSent?: (alert: SOSAlert) => void
   lang?: 'es' | 'en'
 }
 
-export function SOSView({ onCancel }: SOSViewProps) {
+export function SOSView({ onCancel, onAlertSent }: SOSViewProps) {
   const [phase, setPhase] = useState<SOSPhase>('idle')
   const [transcript, setTranscript] = useState('')
   const [manualDesc, setManualDesc] = useState('')
@@ -128,9 +130,29 @@ export function SOSView({ onCancel }: SOSViewProps) {
     try {
       const res = await fetch('/api/sos', { method: 'POST', body: form })
       const data = await res.json()
-      setSosId(data.id || `SOS-${Date.now()}`)
+      const id = data.id || `SOS-${Date.now()}`
+      setSosId(id)
+      onAlertSent?.({
+        id,
+        timestamp: data.timestamp || new Date().toISOString(),
+        transcript: transcript || manualDesc,
+        locationLabel,
+        location,
+        status: 'active',
+        read: false,
+      })
     } catch {
-      setSosId(`SOS-${Date.now()}`)
+      const id = `SOS-${Date.now()}`
+      setSosId(id)
+      onAlertSent?.({
+        id,
+        timestamp: new Date().toISOString(),
+        transcript: transcript || manualDesc,
+        locationLabel,
+        location,
+        status: 'active',
+        read: false,
+      })
     }
     setPhase('sent')
   }

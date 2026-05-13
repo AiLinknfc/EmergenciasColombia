@@ -11,30 +11,30 @@ export async function POST(request: NextRequest) {
   const sosId = `SOS-${Date.now()}`
   const timestamp = new Date().toISOString()
 
-  // Reenviar a n8n si el webhook está configurado
   const webhookUrl = process.env.N8N_WEBHOOK_URL
   if (webhookUrl) {
     try {
-      const payload = new FormData()
-      payload.append('id', sosId)
-      payload.append('timestamp', timestamp)
-      payload.append('transcript', transcript)
-      payload.append('location', JSON.stringify(location))
-      payload.append('metadata', JSON.stringify(metadata))
-      if (audio) payload.append('audio', audio, 'emergency.webm')
-
-      await fetch(webhookUrl, { method: 'POST', body: payload })
+      const n8nRes = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: sosId,
+          timestamp,
+          transcript,
+          location,
+          metadata,
+          hasAudio: !!audio,
+          audioSizeBytes: audio?.size ?? 0,
+        }),
+      })
+      const n8nBody = await n8nRes.text()
+      console.log(`[SOS] n8n status: ${n8nRes.status} | body: ${n8nBody.substring(0, 200)}`)
     } catch (err) {
-      console.error('[SOS] Error enviando a n8n:', err)
+      console.error('[SOS] Error conectando a n8n:', err)
     }
   } else {
-    // Sin n8n configurado: log para desarrollo
-    console.log('[SOS] Emergencia recibida (N8N_WEBHOOK_URL no configurado)')
-    console.log('[SOS] ID:', sosId)
-    console.log('[SOS] Ubicación:', location)
-    console.log('[SOS] Transcripción:', transcript)
-    console.log('[SOS] Metadatos:', metadata)
-    if (audio) console.log('[SOS] Audio incluido:', audio.size, 'bytes')
+    console.log('[SOS] N8N_WEBHOOK_URL no configurado. Payload:')
+    console.log({ sosId, timestamp, transcript, location, metadata })
   }
 
   return NextResponse.json({ success: true, id: sosId, timestamp })

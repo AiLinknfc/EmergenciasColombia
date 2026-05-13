@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useSOSAlerts } from '@/hooks/useSOSAlerts';
 import { DashboardView } from '@/components/dashboard/DashboardView';
 import { DirectoryView } from '@/components/dashboard/DirectoryView';
 import { ReportView } from '@/components/dashboard/ReportView';
@@ -33,9 +34,12 @@ export default function Home() {
   const [currentView, setCurrentView] = useState<View>('dashboard');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [lang, setLang] = useState<Language>('es');
   const { user, signOut } = useAuth();
+  const { alerts, addAlert, markAllRead, closeAlert, unreadCount } = useSOSAlerts();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const alertsRef = useRef<HTMLDivElement>(null);
   
   const t = translations[lang];
 
@@ -49,6 +53,9 @@ export default function Home() {
     function handleClickOutside(event: MouseEvent) {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
+      }
+      if (alertsRef.current && !alertsRef.current.contains(event.target as Node)) {
+        setIsAlertsOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -208,10 +215,72 @@ export default function Home() {
               <span className="text-[10px] font-black uppercase tracking-widest">{lang}</span>
             </button>
 
-            <button className="p-2 hover:bg-surface-container-high rounded-full relative">
-              <Bell className="w-5 h-5 text-primary" />
-              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-error text-[8px] font-black text-white rounded-full border-2 border-surface flex items-center justify-center shadow-lg">3</span>
-            </button>
+            <div className="relative" ref={alertsRef}>
+              <button
+                onClick={() => { setIsAlertsOpen(v => !v); markAllRead(); }}
+                className="p-2 hover:bg-surface-container-high rounded-full relative"
+              >
+                <Bell className="w-5 h-5 text-primary" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-error text-[8px] font-black text-white rounded-full border-2 border-surface flex items-center justify-center shadow-lg animate-pulse">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              <AnimatePresence>
+                {isAlertsOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 12, scale: 0.95 }}
+                    className="absolute right-0 mt-3 w-80 bg-surface-container-lowest border-2 border-outline-variant rounded-2xl shadow-2xl z-50 overflow-hidden"
+                  >
+                    <div className="p-4 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
+                      <div>
+                        <p className="font-black text-xs uppercase tracking-[0.2em]">Alertas SOS</p>
+                        <p className="text-[9px] text-on-surface-variant mt-0.5">{alerts.length} alertas enviadas</p>
+                      </div>
+                    </div>
+
+                    <div className="max-h-[360px] overflow-y-auto custom-scrollbar">
+                      {alerts.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <Bell className="w-8 h-8 text-on-surface-variant/20 mx-auto mb-2" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant/40">Sin alertas</p>
+                        </div>
+                      ) : (
+                        alerts.map(alert => (
+                          <div key={alert.id} className="p-4 border-b border-outline-variant hover:bg-surface-container-low transition-all">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className={`text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest ${alert.status === 'active' ? 'bg-error/10 text-error' : 'bg-outline-variant/30 text-on-surface-variant'}`}>
+                                {alert.status === 'active' ? 'Activa' : 'Cerrada'}
+                              </span>
+                              <span className="text-[8px] font-mono text-on-surface-variant/60">
+                                {new Date(alert.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                            <p className="font-black text-[10px] font-mono tracking-tight text-primary">{alert.id}</p>
+                            {alert.transcript && (
+                              <p className="text-[10px] text-on-surface-variant mt-1 line-clamp-2 leading-relaxed">{alert.transcript}</p>
+                            )}
+                            <p className="text-[9px] font-mono text-primary/50 mt-1">{alert.locationLabel}</p>
+                            {alert.status === 'active' && (
+                              <button
+                                onClick={() => closeAlert(alert.id)}
+                                className="mt-2 text-[8px] font-black uppercase tracking-widest text-on-surface-variant/50 hover:text-error transition-colors"
+                              >
+                                Cerrar incidente
+                              </button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
             
             <div className="relative" ref={userMenuRef}>
               <button 
@@ -275,10 +344,10 @@ export default function Home() {
         {/* View Content */}
         <div className="flex-1 overflow-auto p-4 md:p-8 bg-surface custom-scrollbar">
           <AnimatePresence mode="wait">
-            {currentView === 'dashboard' && <DashboardView key="dashboard" onReport={() => setCurrentView('report')} lang={lang} />}
+            {currentView === 'dashboard' && <DashboardView key="dashboard" onReport={() => setCurrentView('report')} lang={lang} sosAlerts={alerts} onCloseAlert={closeAlert} />}
             {currentView === 'directory' && <DirectoryView key="directory" lang={lang} />}
             {currentView === 'report' && <ReportView key="report" onBack={() => setCurrentView('dashboard')} lang={lang} />}
-            {currentView === 'sos' && <SOSView key="sos" onCancel={() => setCurrentView('dashboard')} lang={lang} />}
+            {currentView === 'sos' && <SOSView key="sos" onCancel={() => setCurrentView('dashboard')} onAlertSent={addAlert} lang={lang} />}
           </AnimatePresence>
         </div>
 

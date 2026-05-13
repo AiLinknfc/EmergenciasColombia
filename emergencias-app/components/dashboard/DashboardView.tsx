@@ -1,43 +1,76 @@
 'use client'
 
 import React, { useState } from 'react';
-import { 
-  Flame, 
-  Map as MapIcon, 
-  Ambulance, 
-  ShieldCheck, 
+import {
+  Flame,
+  Map as MapIcon,
+  Ambulance,
+  ShieldCheck,
   Navigation,
-  ChevronRight,
   History,
   Minus,
-  Maximize2
+  Maximize2,
+  Radio
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { translations } from '@/lib/translations';
 import { useAuth } from '@/hooks/useAuth';
+import { SOSAlert } from '@/hooks/useSOSAlerts';
 
 interface DashboardViewProps {
   onReport: () => void;
   lang?: 'es' | 'en';
+  sosAlerts?: SOSAlert[];
+  onCloseAlert?: (id: string) => void;
 }
 
 const MOCK_ACTIVE = [
-  { id: 'INC-88392', title: 'Incendio Estructural', location: 'Calle 24 #15-32', details: 'Unidad E-42 en camino', status: 'crítico', time: '04:12' },
-  { id: 'INC-88401', title: 'Emergencia Médica', location: 'Parque Central Sur', details: 'Unidad EMS A-02 en escena', status: 'urgente', time: '01:58' }
+  { id: 'INC-88392', title: 'Incendio Estructural', location: 'Calle 24 #15-32', details: 'Unidad E-42 en camino', status: 'crítico', time: '04:12', isSOS: false },
+  { id: 'INC-88401', title: 'Emergencia Médica', location: 'Parque Central Sur', details: 'Unidad EMS A-02 en escena', status: 'urgente', time: '01:58', isSOS: false }
 ];
 
 const MOCK_INACTIVE = [
-  { id: 'INC-88300', title: 'Fuga de Gas', location: 'Avenida 5 #10', details: 'Controlado y cerrado', status: 'cerrado', time: '14:20' },
-  { id: 'INC-88312', title: 'Rescate Animal', location: 'Barrio Obrero', details: 'Exitoso', status: 'cerrado', time: '10:05' }
+  { id: 'INC-88300', title: 'Fuga de Gas', location: 'Avenida 5 #10', details: 'Controlado y cerrado', status: 'cerrado', time: '14:20', isSOS: false },
+  { id: 'INC-88312', title: 'Rescate Animal', location: 'Barrio Obrero', details: 'Exitoso', status: 'cerrado', time: '10:05', isSOS: false }
 ];
 
-export function DashboardView({ onReport, lang = 'es' }: DashboardViewProps) {
+export function DashboardView({ onReport, lang = 'es', sosAlerts = [], onCloseAlert }: DashboardViewProps) {
   const t = translations[lang];
   const { user } = useAuth();
   const isAdmin = user?.role === 'business';
 
   const [activeExpanded, setActiveExpanded] = useState(true);
   const [inactiveExpanded, setInactiveExpanded] = useState(true);
+
+  // Convertir alertas SOS a formato de incidente
+  const cutoff = Date.now() - 4 * 60 * 60 * 1000
+  const sosActive = sosAlerts
+    .filter(a => a.status === 'active' && new Date(a.timestamp).getTime() > cutoff)
+    .map(a => ({
+      id: a.id,
+      title: 'Alerta SOS',
+      location: a.locationLabel || 'Ubicación no disponible',
+      details: a.transcript || 'Sin descripción de voz',
+      status: 'crítico',
+      time: new Date(a.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+      isSOS: true,
+      alertRef: a,
+    }))
+  const sosClosed = sosAlerts
+    .filter(a => a.status === 'closed' || new Date(a.timestamp).getTime() <= cutoff)
+    .map(a => ({
+      id: a.id,
+      title: 'Alerta SOS',
+      location: a.locationLabel || 'Ubicación no disponible',
+      details: a.transcript || 'Sin descripción de voz',
+      status: 'cerrado',
+      time: new Date(a.timestamp).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+      isSOS: true,
+      alertRef: a,
+    }))
+
+  const allActive = [...sosActive, ...MOCK_ACTIVE]
+  const allInactive = [...sosClosed, ...MOCK_INACTIVE]
 
   return (
     <motion.div 
@@ -95,8 +128,8 @@ export function DashboardView({ onReport, lang = 'es' }: DashboardViewProps) {
                   exit={{ height: 0 }}
                   className="overflow-hidden divide-y divide-outline-variant"
                 >
-                  {MOCK_ACTIVE.map((incident) => (
-                    <IncidentRow key={incident.id} incident={incident} t={t} />
+                  {allActive.map((incident) => (
+                    <IncidentRow key={incident.id} incident={incident} t={t} onClose={incident.isSOS ? () => onCloseAlert?.(incident.id) : undefined} />
                   ))}
                 </motion.div>
               )}
@@ -126,7 +159,7 @@ export function DashboardView({ onReport, lang = 'es' }: DashboardViewProps) {
                     exit={{ height: 0 }}
                     className="overflow-hidden divide-y divide-outline-variant"
                   >
-                    {MOCK_INACTIVE.map((incident) => (
+                    {allInactive.map((incident) => (
                       <IncidentRow key={incident.id} incident={incident} t={t} inactive />
                     ))}
                   </motion.div>
@@ -161,16 +194,31 @@ export function DashboardView({ onReport, lang = 'es' }: DashboardViewProps) {
   );
 }
 
-function IncidentRow({ incident, t, inactive = false }: { incident: any; t: any; inactive?: boolean }) {
+function IncidentRow({ incident, t, inactive = false, onClose }: { incident: any; t: any; inactive?: boolean; onClose?: () => void }) {
   return (
-    <div className={`p-6 flex items-center gap-6 hover:bg-surface-container-low transition-all group cursor-pointer ${inactive ? 'opacity-70' : ''}`}>
-      <div className={`w-1.5 h-12 rounded-full shrink-0 ${inactive ? 'bg-outline-variant' : 'bg-primary'}`} />
+    <div className={`p-5 flex items-start gap-4 hover:bg-surface-container-low transition-all group cursor-pointer ${inactive ? 'opacity-70' : ''}`}>
+      <div className={`w-1.5 h-10 rounded-full shrink-0 mt-1 ${inactive ? 'bg-outline-variant' : incident.isSOS ? 'bg-error' : 'bg-primary'}`} />
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <span className="text-[9px] font-black uppercase tracking-widest opacity-60">{incident.id}</span>
-          <h4 className="font-black text-sm uppercase tracking-tight truncate">{incident.title}</h4>
+          {incident.isSOS && (
+            <span className="flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded-full bg-error/10 text-error uppercase tracking-widest">
+              <Radio className="w-2.5 h-2.5" /> SOS
+            </span>
+          )}
+          <h4 className="font-black text-xs uppercase tracking-tight truncate">{incident.title}</h4>
         </div>
-        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest truncate">{incident.location} • {incident.details}</p>
+        <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest truncate">
+          {incident.location} • {incident.details}
+        </p>
+        {onClose && !inactive && (
+          <button
+            onClick={e => { e.stopPropagation(); onClose(); }}
+            className="mt-1.5 text-[8px] font-black uppercase tracking-widest text-on-surface-variant/40 hover:text-error transition-colors"
+          >
+            Cerrar incidente
+          </button>
+        )}
       </div>
       <div className="text-right shrink-0">
         <p className="font-black text-sm tracking-tighter text-primary">{incident.time}</p>
